@@ -14,4 +14,4 @@ if [ -z "$MSG" ]; then
 fi
 
 COUNT=0
-while [ true ]; do ping -q -c1 $IP > /dev/null && (clear; echo "Attempt: $COUNT"; PEBBLE_SOCKET=$IP ./pebble services) || (clear; echo "Attempt: $COUNT"; echo "$MSG"); sleep 1; COUNT=$((COUNT+1)); done
+while [ true ]; do ping -q -c1 $IP > /dev/null && (clear; echo "Attempt: $COUNT"; PEBBLE_SOCKET=$IP ./pebble_amd64 services) || (clear; echo "Attempt: $COUNT"; echo "$MSG"); sleep 1; COUNT=$((COUNT+1)); done

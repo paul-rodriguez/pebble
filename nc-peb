@@ -1,0 +1,2 @@
+#!/bin/bash
+nc localhost 8800 | sed -n 's/.*pebble.\(.*\)/\1/p'

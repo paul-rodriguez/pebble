@@ -1,0 +1,3 @@
+#!/bin/bash
+clear
+nc localhost 8800 | sed -n 's/.*netmanager.\(.*\)/\1/p'
