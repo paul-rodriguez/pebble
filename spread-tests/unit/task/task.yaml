@@ -1,0 +1,17 @@
+
+summary: Pebble unit tests
+environment:
+    TARGET/cmd: ./cmd/pebble
+    TARGET/internal_daemon: ./internal/daemon
+    TARGET/internal_logger: ./internal/logger
+    TARGET/internal_osutil: ./internal/osutil
+    TARGET/internal_overlord: ./internal/overlord
+    TARGET/internal_plan: ./internal/plan
+    TARGET/internal_progress: ./internal/progress
+    TARGET/internal_servicelog: ./internal/servicelog
+    TARGET/internal_systemd: ./internal/systemd
+    TARGET/internal_testutil: ./internal/testutil
+    TARGET/internal_timeutil: ./internal/timeutil
+    TARGET/internal_timing: ./internal/timing
+execute: |
+    ./unit_test.sh $TARGET

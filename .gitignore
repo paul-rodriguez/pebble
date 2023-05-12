@@ -9,3 +9,6 @@ cmd/VERSION
 /pebble
 
 dist/
+
+# Spread temp files
+.spread-reuse.*

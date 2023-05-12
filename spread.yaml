@@ -1,0 +1,30 @@
+
+project: pebble
+
+environment:
+    SUITE_DIR: "${SPREAD_PATH}/${SPREAD_SUITE}."
+    TASK_DIR: "${SPREAD_PATH}/${SPREAD_TASK}"
+
+backends:
+    lxd:
+        systems: [ubuntu-22.04]
+
+        prepare: |
+            ${SPREAD_PATH}/spread-tests/install-go.sh
+
+suites:
+    spread-tests/integration/:
+        summary: Integration tests
+
+        prepare-each: |
+            ${SUITE_DIR}/start_pebble.sh
+
+        restore-each: |
+            ${SUITE_DIR}/stop_pebble.sh
+
+    spread-tests/unit/:
+        summary: Unit tests
+
+
+path: /pebble-spread-test
+

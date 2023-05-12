@@ -1,0 +1,11 @@
+
+summary: Dummy service autostart test
+kill-timeout: 2m
+
+execute: |
+    ${SUITE_DIR}/pebble_wrapper.sh logs | grep -e "dummy service log"
+    ${SUITE_DIR}/pebble_wrapper.sh checks 2>&1 | grep -e "Plan has no health checks"
+    ${SUITE_DIR}/pebble_wrapper.sh warnings | grep -e "No warnings"
+    ${SUITE_DIR}/pebble_wrapper.sh services | grep -E -e "dummy\s+enabled\s+active"
+    ${SUITE_DIR}/pebble_wrapper.sh changes | grep -E -e "Autostart service \"dummy\""
+

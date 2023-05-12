@@ -1,0 +1,11 @@
+
+summary: Dummy service manual start test
+kill-timeout: 2m
+
+execute: |
+    ${SUITE_DIR}/pebble_wrapper.sh stop dummy
+    ${SUITE_DIR}/pebble_wrapper.sh services | grep -E -e "dummy\s+enabled\s+inactive"
+    ${SUITE_DIR}/pebble_wrapper.sh changes | grep -e "Stop service \"dummy\""
+    ${SUITE_DIR}/pebble_wrapper.sh start dummy
+    ${SUITE_DIR}/pebble_wrapper.sh changes | grep -e "Start service \"dummy\""
+

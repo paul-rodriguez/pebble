@@ -1,0 +1,8 @@
+services:
+    dummy:
+        override: replace
+        summary: Dummy service
+        command: ../dummy_service.sh
+        startup: enabled
+        on-failure: shutdown
+
