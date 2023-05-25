@@ -10,7 +10,8 @@ backends:
         systems: [ubuntu-22.04]
 
         prepare: |
-            ${SPREAD_PATH}/spread-tests/install-go.sh
+            ${SPREAD_PATH}/spread-tests/install_go.sh
+            ${SPREAD_PATH}/spread-tests/install_gcc.sh
 
 suites:
     spread-tests/integration/:
