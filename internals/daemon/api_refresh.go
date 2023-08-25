@@ -26,13 +26,15 @@ import (
 
 	"github.com/canonical/pebble/internals/osutil"
 	"github.com/canonical/pebble/internals/osutil/sys"
+	"github.com/canonical/pebble/internals/overlord/cmdstate"
+	"github.com/canonical/pebble/internals/overlord/state"
 )
 
 func absolutePathError(path string) error {
 	return fmt.Errorf("paths must be relative to firmware slot, got %q", path)
 }
 
-func v1PostFw(_ *Command, req *http.Request, _ *UserState) Response {
+func v1PostFw(command *Command, req *http.Request, _ *UserState) Response {
 	contentType := req.Header.Get("Content-Type")
 	mediaType, params, err := mime.ParseMediaType(contentType)
 	if err != nil {
@@ -45,7 +47,7 @@ func v1PostFw(_ *Command, req *http.Request, _ *UserState) Response {
 		if len(boundary) < minBoundaryLength {
 			return statusBadRequest("invalid boundary %q", boundary)
 		}
-		return firmwareRequest(req.Body, boundary)
+		return firmwareRequest(command, req.Body, boundary)
 	default:
 		return statusBadRequest("invalid media type %q", mediaType)
 	}
@@ -54,11 +56,11 @@ func v1PostFw(_ *Command, req *http.Request, _ *UserState) Response {
 // Writing files
 
 type fileInfo struct {
-	Path        string `json:"path"`
-	Size        uint64 `json:"size"`
+	Path string `json:"path"`
+	Size uint64 `json:"size"`
 }
 
-func firmwareRequest(body io.Reader, boundary string) Response {
+func firmwareRequest(command *Command, body io.Reader, boundary string) Response {
 	// Read metadata part (field name "request").
 	mr := multipart.NewReader(body, boundary)
 	part, err := mr.NextPart()
@@ -71,9 +73,9 @@ func firmwareRequest(body io.Reader, boundary string) Response {
 
 	// Decode metadata about files to write.
 	var payload struct {
-		Action string           `json:"action"`
-		Slot string		`json:"slot"`
-		File fileInfo		`json:"file"`
+		Action string   `json:"action"`
+		Slot   string   `json:"slot"`
+		File   fileInfo `json:"file"`
 	}
 	decoder := json.NewDecoder(part)
 	if err := decoder.Decode(&payload); err != nil {
@@ -98,13 +100,13 @@ func firmwareRequest(body io.Reader, boundary string) Response {
 	if path != payload.File.Path {
 		return statusBadRequest("no metadata for path %q", path)
 	}
-	err = writeSlotFile(payload.Slot, payload.File, part)
+	err = writeSlotFile(command, payload.Slot, payload.File, part)
 	part.Close()
 
 	return SyncResponse(&fileResult{
-             Path:  payload.File.Path,
-             Error: fwErrorToResult(err),
-        })
+		Path:  payload.File.Path,
+		Error: fwErrorToResult(err),
+	})
 }
 
 func fwErrorToResult(err error) *errorResult {
@@ -117,7 +119,7 @@ func fwErrorToResult(err error) *errorResult {
 	}
 }
 
-func writeSlotFile(slot string, item fileInfo, source io.Reader) error {
+func writeSlotFile(command *Command, slot string, item fileInfo, source io.Reader) error {
 	if pathpkg.IsAbs(item.Path) {
 		return absolutePathError(item.Path)
 	}
@@ -134,11 +136,22 @@ func writeSlotFile(slot string, item fileInfo, source io.Reader) error {
 		return fmt.Errorf("cannot create directory: %w", err)
 	}
 
+	st := command.d.overlord.State()
+	st.Lock()
+	defer st.Unlock()
+
+    task := fwstate.
+	change := st.NewChange("exec", fmt.Sprintf("Execute command %q", args.Command[0]))
+	taskSet := state.NewTaskSet(task)
+	change.AddAll(taskSet)
+
+	stateEnsureBefore(st, 0) // start it right away
+
 	// Atomically write file content to destination.
 	return atomicWriteChown(path, source, 0o664, osutil.AtomicWriteChmod, sysUid, sysGid)
 }
 
 // Because it's hard to test os.Chown without running the tests as root.
 var (
-	atomicWrite      = osutil.AtomicWrite
+	atomicWrite = osutil.AtomicWrite
 )
