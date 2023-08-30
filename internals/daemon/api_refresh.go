@@ -25,8 +25,7 @@ import (
 	"path/filepath"
 
 	"github.com/canonical/pebble/internals/osutil"
-	"github.com/canonical/pebble/internals/osutil/sys"
-	"github.com/canonical/pebble/internals/overlord/cmdstate"
+	"github.com/canonical/pebble/internals/overlord/fwstate"
 	"github.com/canonical/pebble/internals/overlord/state"
 )
 
@@ -127,28 +126,30 @@ func writeSlotFile(command *Command, slot string, item fileInfo, source io.Reade
 	// TODO: hack in path
 	path := filepath.Join("/tmp", slot, item.Path)
 
-	// Current user/group
-	sysUid, sysGid := sys.UserID(osutil.NoChown), sys.GroupID(osutil.NoChown)
+	ovld := command.d.overlord
+	st := ovld.State()
+	st.Lock()
 
-	// Create slot-relative directory if needed.
-	err := mkdirAllChown(pathpkg.Dir(path), 0o664, sysUid, sysGid)
-	if err != nil {
-		return fmt.Errorf("cannot create directory: %w", err)
+	args := fwstate.RefreshArgs{
+		Source: source,
+		Path:   path,
+		Size:   item.Size,
 	}
 
-	st := command.d.overlord.State()
-	st.Lock()
-	defer st.Unlock()
-
-    task := fwstate.
-	change := st.NewChange("exec", fmt.Sprintf("Execute command %q", args.Command[0]))
+	fwMgr := ovld.FirmwarewManager()
+	task, wg, err := fwMgr.NewRefreshTask(st, &args)
+	if err != nil {
+		return err
+	}
+	change := st.NewChange("refresh", fmt.Sprintf("Refresh change %s", args.Path))
 	taskSet := state.NewTaskSet(task)
 	change.AddAll(taskSet)
+	st.Unlock()
 
-	stateEnsureBefore(st, 0) // start it right away
+	st.EnsureBefore(0) // start it right away
 
-	// Atomically write file content to destination.
-	return atomicWriteChown(path, source, 0o664, osutil.AtomicWriteChmod, sysUid, sysGid)
+	wg.Wait()
+	return nil
 }
 
 // Because it's hard to test os.Chown without running the tests as root.

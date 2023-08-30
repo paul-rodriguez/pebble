@@ -30,6 +30,7 @@ import (
 	"github.com/canonical/pebble/internals/osutil"
 	"github.com/canonical/pebble/internals/overlord/checkstate"
 	"github.com/canonical/pebble/internals/overlord/cmdstate"
+	"github.com/canonical/pebble/internals/overlord/fwstate"
 	"github.com/canonical/pebble/internals/overlord/logstate"
 	"github.com/canonical/pebble/internals/overlord/patch"
 	"github.com/canonical/pebble/internals/overlord/restart"
@@ -70,6 +71,7 @@ type Overlord struct {
 	commandMgr       *cmdstate.CommandManager
 	checkMgr         *checkstate.CheckManager
 	logMgr           *logstate.LogManager
+	fwMgr            *fwstate.FirmwareManager
 	externalManagers map[any]StateManager
 }
 
@@ -141,6 +143,8 @@ func New(
 	o.addManager(o.commandMgr)
 
 	o.checkMgr = checkstate.NewManager()
+
+	o.fwMgr = fwstate.NewManager(o.runner)
 
 	// Tell check manager about plan updates.
 	o.serviceMgr.NotifyPlanChanged(o.checkMgr.PlanChanged)
@@ -453,6 +457,10 @@ func (o *Overlord) CommandManager() *cmdstate.CommandManager {
 // checks under the overlord.
 func (o *Overlord) CheckManager() *checkstate.CheckManager {
 	return o.checkMgr
+}
+
+func (o *Overlord) FirmwarewManager() *fwstate.FirmwareManager {
+	return o.fwMgr
 }
 
 // Fake creates an Overlord without any managers and with a backend

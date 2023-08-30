@@ -17,18 +17,21 @@ package fwstate
 import (
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/canonical/pebble/internals/overlord/state"
 )
 
 type RefreshArgs struct {
-	source io.Reader
-	path   string
-	size   int
+	Source io.Reader
+	Path   string
+	Size   uint64
+	wg     sync.WaitGroup
 }
 
-func NewRefreshTask(st *state.State, args *RefreshArgs) (*state.Task, error) {
-	task := st.NewTask("refresh", fmt.Sprintf("Refresh file %s", args.path))
-	task.Set("refresh-args", args)
-	return task, nil
+func (m *FirmwareManager) NewRefreshTask(st *state.State, args *RefreshArgs) (*state.Task, *sync.WaitGroup, error) {
+	task := st.NewTask("refresh", fmt.Sprintf("Refresh file %s", args.Path))
+	m.refreshArgsMap[task.ID()] = args
+	args.wg.Add(1)
+	return task, &args.wg, nil
 }

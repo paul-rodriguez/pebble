@@ -15,25 +15,49 @@
 package fwstate
 
 import (
+	"fmt"
+
+	pathpkg "path"
+
+	"github.com/canonical/pebble/internals/osutil"
+	"github.com/canonical/pebble/internals/osutil/sys"
 	"github.com/canonical/pebble/internals/overlord/state"
 	"gopkg.in/tomb.v2"
 )
 
-type FirmwareManager struct{}
+type FirmwareManager struct {
+	refreshArgsMap map[string]*RefreshArgs
+}
 
 // NewManager creates a new FirmwareManager.
 func NewManager(runner *state.TaskRunner) *FirmwareManager {
-	manager := &FirmwareManager{}
+	manager := &FirmwareManager{refreshArgsMap: make(map[string]*RefreshArgs)}
 	runner.AddHandler("refresh", manager.refreshDoHandler, nil)
 	return manager
 }
 
 func (m *FirmwareManager) refreshDoHandler(task *state.Task, tomb *tomb.Tomb) error {
+	args := m.refreshArgsMap[task.ID()]
+	defer args.wg.Done()
 
-	var args RefreshArgs
-	err := task.Get("refresh-args", &args)
+	// Current user/group
+	sysUid, sysGid := sys.UserID(osutil.NoChown), sys.GroupID(osutil.NoChown)
+
+	// Create slot-relative directory if needed.
+	err := osutil.MkdirAllChown(pathpkg.Dir(args.Path), 0o664, sysUid, sysGid)
+	if err != nil {
+		return fmt.Errorf("cannot create directory: %w", err)
+	}
+
+	err = osutil.AtomicWriteChown(
+		args.Path,
+		args.Source,
+		0o644,
+		osutil.AtomicWriteFollow,
+		sysUid,
+		sysGid)
 	if err != nil {
 		return err
 	}
-	// todo
+	return nil
 }
