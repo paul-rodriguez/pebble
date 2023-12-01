@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/netip"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -281,6 +282,12 @@ func Run() error {
 	logger.SetLogger(logger.New(os.Stderr, fmt.Sprintf("[%s] ", cmd.ProgramName)))
 
 	_, clientConfig.Socket = getEnvPaths()
+
+	// If clientConfig.Socket is a valid "IP:PORT", use HTTP-over-TCP
+	_, err := netip.ParseAddrPort(clientConfig.Socket)
+	if err == nil {
+		clientConfig.BaseURL = "http://" + clientConfig.Socket
+	}
 
 	cli, err := client.New(&clientConfig)
 	if err != nil {
