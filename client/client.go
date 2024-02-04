@@ -123,6 +123,15 @@ func unixDialer(socketPath string) func(string, string) (net.Conn, error) {
 	}
 }
 
+// HACK: Support a TCP override dailer to make websockets work. Websockets
+// require a slight tweak to make the URL logic work between unix sockets
+// and TCP.
+func tcpDialer(url string) func(string, string) (net.Conn, error) {
+	return func(_, _ string) (net.Conn, error) {
+		return net.Dial("tcp", url)
+	}
+}
+
 type doer interface {
 	Do(*http.Request) (*http.Response, error)
 }
@@ -587,7 +596,7 @@ func newDefaultRequester(client *Client, opts *Config) (*defaultRequester, error
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse base URL: %w", err)
 		}
-		transport := &http.Transport{DisableKeepAlives: opts.DisableKeepAlive}
+		transport := &http.Transport{Dial: tcpDialer(baseURL.Host), DisableKeepAlives: opts.DisableKeepAlive}
 		requester = &defaultRequester{baseURL: *baseURL, transport: transport}
 	}
 
