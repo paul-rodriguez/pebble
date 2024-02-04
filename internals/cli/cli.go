@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net/netip"
+	"net"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -283,10 +283,31 @@ func Run() error {
 
 	_, clientConfig.Socket = getEnvPaths()
 
-	// If clientConfig.Socket is a valid "IP:PORT", use HTTP-over-TCP
-	_, err := netip.ParseAddrPort(clientConfig.Socket)
-	if err == nil {
+	// HACK: If clientConfig.Socket is a valid "IP:PORT", use HTTP-over-TCP
+	//
+	// Let's first try only an unresolved IP (with default :8888 port).
+	// The default case would make sense to not trouble the user with
+	// knowing about port numbers that KernOS uses. The solution should
+	// hide this whenever possible.
+	//
+	// This hack is not an implementation proposal. However, some thought
+	// should go into how the user will point the client at a device. The
+	// environment variable could be a start, but ultimately a cli option
+	// feels like a more professional way.
+	//
+	// As noted above, this feature will be required for KernOS appliance
+	// connections, so we should design it in a way, and place (pebble vs. kernos)
+	// that makes sense for the purpose.
+	ip, err := net.ResolveIPAddr("ip", clientConfig.Socket)
+	if err == nil && ip.IP.To4() != nil {
+		clientConfig.Socket = ip.String() + ":8888"
 		clientConfig.BaseURL = "http://" + clientConfig.Socket
+	} else {
+		tcp, err := net.ResolveTCPAddr("tcp", clientConfig.Socket)
+		if err == nil && tcp.IP.To4() != nil && tcp.Port != 0 {
+			clientConfig.Socket = tcp.String()
+			clientConfig.BaseURL = "http://" + clientConfig.Socket
+		}
 	}
 
 	cli, err := client.New(&clientConfig)
