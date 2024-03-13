@@ -53,7 +53,7 @@ func (cmd cmdStart) Execute(args []string) error {
 	servopts := client.ServiceOptions{
 		Names: cmd.Positional.Services,
 	}
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

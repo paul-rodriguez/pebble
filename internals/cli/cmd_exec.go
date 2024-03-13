@@ -183,7 +183,7 @@ func (cmd *cmdExec) Execute(args []string) error {
 		}
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

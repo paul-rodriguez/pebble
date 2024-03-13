@@ -82,7 +82,7 @@ func (cmd *cmdMkdir) Execute(args []string) error {
 		opts.Permissions = os.FileMode(p)
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

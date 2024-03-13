@@ -104,7 +104,7 @@ func (c *cmdChanges) Execute(args []string) error {
 		return nil
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func (c *cmdChanges) Execute(args []string) error {
 }
 
 func (c *cmdTasks) Execute([]string) error {
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func queryChange(cli *client.Client, chid string) (*client.Change, error) {
 }
 
 func (c *cmdTasks) showChange(chid string) error {
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

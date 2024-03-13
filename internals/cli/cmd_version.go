@@ -55,7 +55,7 @@ func (cmd cmdVersion) Execute(args []string) error {
 		fmt.Fprintln(Stdout, version.Version)
 		return nil
 	}
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

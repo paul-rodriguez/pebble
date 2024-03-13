@@ -60,7 +60,7 @@ func (cmd *cmdSignal) Execute(args []string) error {
 		Signal:   cmd.Positional.Signal,
 		Services: cmd.Positional.Services,
 	}
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

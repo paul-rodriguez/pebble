@@ -485,7 +485,7 @@ func cliStatePath() string {
 	return filepath.Join(configDir, "pebble", "cli.json")
 }
 
-func defaultClient() (*client.Client, error) {
+func DefaultClient() (*client.Client, error) {
 	_, address := getEnvPaths()
 	config := ConfigFromAddress(address)
 	result, err := client.New(config)

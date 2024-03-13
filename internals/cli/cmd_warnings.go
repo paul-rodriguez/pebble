@@ -70,7 +70,7 @@ func (cmd *cmdWarnings) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 	now := time.Now()
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

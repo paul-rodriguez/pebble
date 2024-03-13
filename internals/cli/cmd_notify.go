@@ -66,7 +66,7 @@ func (cmd *cmdNotify) Execute(args []string) error {
 		data[key] = value
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

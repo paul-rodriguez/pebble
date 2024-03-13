@@ -62,7 +62,7 @@ func (cmd *cmdAdd) Execute(args []string) error {
 		return err
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

@@ -56,7 +56,7 @@ func (cmd *cmdServices) Execute(args []string) error {
 		Names: cmd.Positional.Services,
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

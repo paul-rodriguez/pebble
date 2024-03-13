@@ -57,7 +57,7 @@ func (cmd *cmdPull) Execute(args []string) error {
 	}
 	defer f.Close()
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

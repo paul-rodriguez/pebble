@@ -55,7 +55,7 @@ func (cmd *cmdChecks) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

@@ -87,7 +87,7 @@ func (cmd *cmdPush) Execute(args []string) error {
 		permissions = st.Mode().Perm()
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

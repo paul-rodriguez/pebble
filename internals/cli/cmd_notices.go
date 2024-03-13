@@ -78,7 +78,7 @@ func (cmd *cmdNotices) Execute(args []string) error {
 		After:  state.NoticesLastOkayed,
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}

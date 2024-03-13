@@ -103,7 +103,7 @@ func (cmd *cmdLogs) Execute(args []string) error {
 		N:        n,
 	}
 
-	commandClient, err := defaultClient()
+	commandClient, err := DefaultClient()
 	if err != nil {
 		return err
 	}
