@@ -43,8 +43,6 @@ arguments using "--", for example:
 `
 
 type cmdExec struct {
-	client *client.Client
-
 	WorkingDir     string        `short:"w"`
 	Env            []string      `long:"env"`
 	UserID         *int          `long:"uid"`
@@ -83,7 +81,7 @@ func init() {
 		},
 		PassAfterNonOption: true,
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdExec{client: opts.Client}
+			return &cmdExec{}
 		},
 	})
 }
@@ -185,8 +183,13 @@ func (cmd *cmdExec) Execute(args []string) error {
 		}
 	}
 
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
 	// Start the command.
-	process, err := cmd.client.Exec(opts)
+	process, err := commandClient.Exec(opts)
 	if err != nil {
 		return err
 	}
@@ -207,6 +210,7 @@ func (cmd *cmdExec) Execute(args []string) error {
 	case err = <-finished:
 		switch e := err.(type) {
 		case nil:
+			maybePresentWarnings(commandClient.WarningsSummary())
 			return nil
 		case *client.ExitError:
 			logger.Debugf("Process exited with code %d", e.ExitCode())
@@ -219,6 +223,7 @@ func (cmd *cmdExec) Execute(args []string) error {
 		// back to the start of the line.
 		fmt.Fprintf(os.Stderr, "SIGHUP received, exiting\r\n")
 		// Exit with exit code 0 in this case (same behaviour as ssh).
+		maybePresentWarnings(commandClient.WarningsSummary())
 		return nil
 	}
 }

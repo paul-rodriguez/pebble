@@ -59,7 +59,6 @@ var ErrExtraArgs = fmt.Errorf("too many arguments for command")
 
 // CmdOptions exposes state made accessible during command execution.
 type CmdOptions struct {
-	Client *client.Client
 	Parser *flags.Parser
 }
 
@@ -156,11 +155,10 @@ type defaultOptions struct {
 // Parser creates and populates a fresh parser.
 // Since commands have local state a fresh parser is required to isolate tests
 // from each other.
-func Parser(cli *client.Client) *flags.Parser {
+func Parser(_ *client.Client) *flags.Parser {
 	// Implement --version by default on every command
 	defaultOpts := defaultOptions{
 		Version: func() {
-			printVersions(cli)
 			panic(&exitStatus{0})
 		},
 	}
@@ -187,7 +185,7 @@ func Parser(cli *client.Client) *flags.Parser {
 
 	// Add all commands
 	for _, c := range commands {
-		obj := c.New(&CmdOptions{Client: cli, Parser: parser})
+		obj := c.New(&CmdOptions{Parser: parser})
 
 		var target *flags.Command
 		if c.Debug {
@@ -281,41 +279,7 @@ func Run() error {
 
 	logger.SetLogger(logger.New(os.Stderr, fmt.Sprintf("[%s] ", cmd.ProgramName)))
 
-	_, clientConfig.Socket = getEnvPaths()
-
-	// HACK: If clientConfig.Socket is a valid "IP:PORT", use HTTP-over-TCP
-	//
-	// Let's first try only an unresolved IP (with default :8888 port).
-	// The default case would make sense to not trouble the user with
-	// knowing about port numbers that KernOS uses. The solution should
-	// hide this whenever possible.
-	//
-	// This hack is not an implementation proposal. However, some thought
-	// should go into how the user will point the client at a device. The
-	// environment variable could be a start, but ultimately a cli option
-	// feels like a more professional way.
-	//
-	// As noted above, this feature will be required for KernOS appliance
-	// connections, so we should design it in a way, and place (pebble vs. kernos)
-	// that makes sense for the purpose.
-	ip, err := net.ResolveIPAddr("ip", clientConfig.Socket)
-	if err == nil && ip.IP.To4() != nil {
-		clientConfig.Socket = ip.String() + ":8888"
-		clientConfig.BaseURL = "http://" + clientConfig.Socket
-	} else {
-		tcp, err := net.ResolveTCPAddr("tcp", clientConfig.Socket)
-		if err == nil && tcp.IP.To4() != nil && tcp.Port != 0 {
-			clientConfig.Socket = tcp.String()
-			clientConfig.BaseURL = "http://" + clientConfig.Socket
-		}
-	}
-
-	cli, err := client.New(&clientConfig)
-	if err != nil {
-		return fmt.Errorf("cannot create client: %v", err)
-	}
-
-	parser := Parser(cli)
+	parser := Parser(nil)
 	xtra, err := parser.Parse()
 	if err != nil {
 		if e, ok := err.(*flags.Error); ok {
@@ -348,9 +312,44 @@ func Run() error {
 		return nil
 	}
 
-	maybePresentWarnings(cli.WarningsSummary())
-
 	return nil
+}
+
+func ConfigFromAddress(address string) *client.Config {
+	// HACK: If clientConfig.Socket is a valid "IP:PORT", use HTTP-over-TCP
+	//
+	// Let's first try only an unresolved IP (with default :8888 port).
+	// The default case would make sense to not trouble the user with
+	// knowing about port numbers that KernOS uses. The solution should
+	// hide this whenever possible.
+	//
+	// This hack is not an implementation proposal. However, some thought
+	// should go into how the user will point the client at a device. The
+	// environment variable could be a start, but ultimately a cli option
+	// feels like a more professional way.
+	//
+	// As noted above, this feature will be required for KernOS appliance
+	// connections, so we should design it in a way, and place (pebble vs. kernos)
+	// that makes sense for the purpose.
+	ip, err := net.ResolveIPAddr("ip", address)
+	if err == nil && ip.IP.To4() != nil {
+		socket := ip.String() + ":8888"
+		result := &client.Config{
+			Socket:  socket,
+			BaseURL: "http://" + socket,
+		}
+		return result
+	}
+	tcp, err := net.ResolveTCPAddr("tcp", address)
+	if err == nil && tcp.IP.To4() != nil && tcp.Port != 0 {
+		socket := tcp.String()
+		result := &client.Config{
+			Socket:  socket,
+			BaseURL: "http://" + socket,
+		}
+		return result
+	}
+	return &client.Config{Socket: address}
 }
 
 var errorPrefix = "error: "
@@ -484,4 +483,14 @@ func cliStatePath() string {
 		configDir = os.ExpandEnv("$HOME/.config")
 	}
 	return filepath.Join(configDir, "pebble", "cli.json")
+}
+
+func defaultClient() (*client.Client, error) {
+	_, address := getEnvPaths()
+	config := ConfigFromAddress(address)
+	result, err := client.New(config)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create client: %w", err)
+	}
+	return result, nil
 }

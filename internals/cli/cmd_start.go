@@ -27,8 +27,6 @@ any other services it depends on, in the correct order.
 `
 
 type cmdStart struct {
-	client *client.Client
-
 	waitMixin
 	Positional struct {
 		Services []string `positional-arg-name:"<service>" required:"1"`
@@ -42,7 +40,7 @@ func init() {
 		Description: cmdStartDescription,
 		ArgsHelp:    waitArgsHelp,
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdStart{client: opts.Client}
+			return &cmdStart{}
 		},
 	})
 }
@@ -55,16 +53,22 @@ func (cmd cmdStart) Execute(args []string) error {
 	servopts := client.ServiceOptions{
 		Names: cmd.Positional.Services,
 	}
-	changeID, err := cmd.client.Start(&servopts)
+	commandClient, err := defaultClient()
 	if err != nil {
 		return err
 	}
 
-	if _, err := cmd.wait(cmd.client, changeID); err != nil {
+	changeID, err := commandClient.Start(&servopts)
+	if err != nil {
+		return err
+	}
+
+	if _, err := cmd.wait(commandClient, changeID); err != nil {
 		if err == noWait {
 			return nil
 		}
 		return err
 	}
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }

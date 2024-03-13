@@ -19,7 +19,6 @@ import (
 
 	"github.com/canonical/go-flags"
 
-	"github.com/canonical/pebble/client"
 	cmdpkg "github.com/canonical/pebble/cmd"
 )
 
@@ -32,8 +31,6 @@ will again show up until the next '{{.ProgramName}} okay'.
 `
 
 type cmdOkay struct {
-	client *client.Client
-
 	Warnings bool `long:"warnings"`
 }
 
@@ -43,7 +40,7 @@ func init() {
 		Summary:     cmdOkaySummary,
 		Description: cmdOkayDescription,
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdOkay{client: opts.Client}
+			return &cmdOkay{}
 		},
 		ArgsHelp: map[string]string{
 			"--warnings": "Only acknowledge warnings, not other notices",
@@ -76,10 +73,15 @@ func (cmd *cmdOkay) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
 	okayedWarnings := false
 	if !last.IsZero() {
 		okayedWarnings = true
-		err := cmd.client.Okay(last)
+		err := commandClient.Okay(last)
 		if err != nil {
 			return fmt.Errorf("cannot acknowledge warnings: %w", err)
 		}
@@ -91,6 +93,6 @@ func (cmd *cmdOkay) Execute(args []string) error {
 	if !cmd.Warnings && !okayedNotices && !okayedWarnings {
 		return fmt.Errorf("no notices or warnings have been listed; try '%s notices' or '%s warnings'", cmdpkg.ProgramName, cmdpkg.ProgramName)
 	}
-
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }

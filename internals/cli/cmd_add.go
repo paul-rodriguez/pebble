@@ -32,8 +32,6 @@ label (or append if the label is not found).
 `
 
 type cmdAdd struct {
-	client *client.Client
-
 	Combine    bool `long:"combine"`
 	Positional struct {
 		Label     string `positional-arg-name:"<label>" required:"1"`
@@ -50,7 +48,7 @@ func init() {
 			"--combine": "Combine the new layer with an existing layer that has the given label (default is to append)",
 		},
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdAdd{client: opts.Client}
+			return &cmdAdd{}
 		},
 	})
 }
@@ -63,16 +61,24 @@ func (cmd *cmdAdd) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
 	opts := client.AddLayerOptions{
 		Combine:   cmd.Combine,
 		Label:     cmd.Positional.Label,
 		LayerData: data,
 	}
-	err = cmd.client.AddLayer(&opts)
+	err = commandClient.AddLayer(&opts)
 	if err != nil {
 		return err
 	}
 	fmt.Fprintf(Stdout, "Layer %q added successfully from %q\n",
 		cmd.Positional.Label, cmd.Positional.LayerPath)
+
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }

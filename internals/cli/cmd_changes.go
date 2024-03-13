@@ -46,8 +46,6 @@ change that happened recently.
 `
 
 type cmdTasks struct {
-	client *client.Client
-
 	timeMixin
 	changeIDMixin
 }
@@ -59,7 +57,7 @@ func init() {
 		Description: cmdChangesDescription,
 		ArgsHelp:    timeArgsHelp,
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdChanges{client: opts.Client}
+			return &cmdChanges{}
 		},
 	})
 	AddCommand(&CmdInfo{
@@ -68,7 +66,7 @@ func init() {
 		Description: cmdTasksDescription,
 		ArgsHelp:    merge(changeIDMixinArgsHelp, timeArgsHelp),
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdTasks{client: opts.Client}
+			return &cmdTasks{}
 		},
 	})
 }
@@ -106,12 +104,17 @@ func (c *cmdChanges) Execute(args []string) error {
 		return nil
 	}
 
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
 	opts := client.ChangesOptions{
 		ServiceName: c.Positional.Service,
 		Selector:    client.ChangesAll,
 	}
 
-	changes, err := queryChanges(c.client, &opts)
+	changes, err := queryChanges(commandClient, &opts)
 	if err != nil {
 		return err
 	}
@@ -137,11 +140,17 @@ func (c *cmdChanges) Execute(args []string) error {
 	w.Flush()
 	fmt.Fprintln(Stdout)
 
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }
 
 func (c *cmdTasks) Execute([]string) error {
-	chid, err := c.GetChangeID(c.client)
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
+	chid, err := c.GetChangeID(commandClient)
 	if err != nil {
 		if err == noChangeFoundOK {
 			return nil
@@ -149,7 +158,9 @@ func (c *cmdTasks) Execute([]string) error {
 		return err
 	}
 
-	return c.showChange(chid)
+	result := c.showChange(chid)
+	maybePresentWarnings(commandClient.WarningsSummary())
+	return result
 }
 
 func queryChange(cli *client.Client, chid string) (*client.Change, error) {
@@ -164,7 +175,12 @@ func queryChange(cli *client.Client, chid string) (*client.Change, error) {
 }
 
 func (c *cmdTasks) showChange(chid string) error {
-	chg, err := queryChange(c.client, chid)
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
+	chg, err := queryChange(commandClient, chid)
 	if err != nil {
 		return err
 	}

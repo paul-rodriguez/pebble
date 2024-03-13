@@ -44,8 +44,6 @@ Warnings expire automatically, and once expired they are forgotten.
 `
 
 type cmdWarnings struct {
-	client *client.Client
-
 	timeMixin
 	unicodeMixin
 	All     bool `long:"all"`
@@ -62,7 +60,7 @@ func init() {
 			"--verbose": "Show more information",
 		}),
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdWarnings{client: opts.Client}
+			return &cmdWarnings{}
 		},
 	})
 }
@@ -72,8 +70,12 @@ func (cmd *cmdWarnings) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 	now := time.Now()
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
 
-	warnings, err := cmd.client.Warnings(client.WarningsOptions{All: cmd.All})
+	warnings, err := commandClient.Warnings(client.WarningsOptions{All: cmd.All})
 	if err != nil {
 		return err
 	}
@@ -120,7 +122,7 @@ func (cmd *cmdWarnings) Execute(args []string) error {
 		writeWarning(w, warning.Message, termWidth)
 		w.Flush()
 	}
-
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }
 

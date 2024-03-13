@@ -31,8 +31,6 @@ by unique type and key combination (2-arg variant).
 `
 
 type cmdNotice struct {
-	client *client.Client
-
 	UID *uint32 `long:"uid"`
 
 	Positional struct {
@@ -51,7 +49,7 @@ func init() {
 			"--uid": `Look up notice from user with this UID (admin only; 2-arg variant only)`,
 		},
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdNotice{client: opts.Client}
+			return &cmdNotice{}
 		},
 	})
 }
@@ -61,6 +59,11 @@ func (cmd *cmdNotice) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
 	var notice *client.Notice
 	if cmd.Positional.Key != "" {
 		options := client.NoticesOptions{
@@ -68,7 +71,7 @@ func (cmd *cmdNotice) Execute(args []string) error {
 			Types:  []client.NoticeType{client.NoticeType(cmd.Positional.IDOrType)},
 			Keys:   []string{cmd.Positional.Key},
 		}
-		notices, err := cmd.client.Notices(&options)
+		notices, err := commandClient.Notices(&options)
 		if err != nil {
 			return err
 		}
@@ -92,7 +95,7 @@ func (cmd *cmdNotice) Execute(args []string) error {
 			return fmt.Errorf("cannot use --uid option when looking up notice by key")
 		}
 		var err error
-		notice, err = cmd.client.Notice(cmd.Positional.IDOrType)
+		notice, err = commandClient.Notice(cmd.Positional.IDOrType)
 		if err != nil {
 			return err
 		}
@@ -106,6 +109,7 @@ func (cmd *cmdNotice) Execute(args []string) error {
 		return err
 	}
 	fmt.Fprint(Stdout, string(b)) // yaml.Marshal includes the trailing newline
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }
 

@@ -31,8 +31,6 @@ an exit code 1 if at least one of the requested checks are unhealthy.
 `
 
 type cmdHealth struct {
-	client *client.Client
-
 	Level      string `long:"level" choice:"alive" choice:"ready"`
 	Positional struct {
 		Checks []string `positional-arg-name:"<check>"`
@@ -50,7 +48,7 @@ func init() {
 		Description: cmdHealthDescription,
 		ArgsHelp:    cmdHealthArgsHelp,
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdHealth{client: opts.Client}
+			return &cmdHealth{}
 		},
 	})
 }
@@ -60,11 +58,16 @@ func (cmd *cmdHealth) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
 	opts := client.HealthOptions{
 		Level: client.CheckLevel(cmd.Level),
 		Names: cmd.Positional.Checks,
 	}
-	health, err := cmd.client.Health(&opts)
+	health, err := commandClient.Health(&opts)
 	if err != nil {
 		return err
 	}
@@ -78,6 +81,6 @@ func (cmd *cmdHealth) Execute(args []string) error {
 	if !health {
 		panic(&exitStatus{1})
 	}
-
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }

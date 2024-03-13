@@ -15,6 +15,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/canonical/go-flags"
 
 	"github.com/canonical/pebble/client"
@@ -27,8 +29,6 @@ to start by default.
 `
 
 type cmdAutoStart struct {
-	client *client.Client
-
 	waitMixin
 }
 
@@ -39,7 +39,7 @@ func init() {
 		Description: cmdAutoStartDescription,
 		ArgsHelp:    waitArgsHelp,
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdAutoStart{client: opts.Client}
+			return &cmdAutoStart{}
 		},
 	})
 }
@@ -49,17 +49,25 @@ func (cmd cmdAutoStart) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
+	_, address := getEnvPaths()
+	config := ConfigFromAddress(address)
+	commandClient, err := client.New(config)
+	if err != nil {
+		return fmt.Errorf("cannot create client: %w", err)
+	}
+
 	servopts := client.ServiceOptions{}
-	changeID, err := cmd.client.AutoStart(&servopts)
+	changeID, err := commandClient.AutoStart(&servopts)
 	if err != nil {
 		return err
 	}
 
-	if _, err := cmd.wait(cmd.client, changeID); err != nil {
+	if _, err := cmd.wait(commandClient, changeID); err != nil {
 		if err == noWait {
 			return nil
 		}
 		return err
 	}
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }

@@ -30,8 +30,6 @@ arguments.
 `
 
 type cmdChecks struct {
-	client *client.Client
-
 	Level      string `long:"level" choice:"alive" choice:"ready"`
 	Positional struct {
 		Checks []string `positional-arg-name:"<check>"`
@@ -47,7 +45,7 @@ func init() {
 			"--level": "Check level to filter for",
 		},
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdChecks{client: opts.Client}
+			return &cmdChecks{}
 		},
 	})
 }
@@ -57,11 +55,16 @@ func (cmd *cmdChecks) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
 	opts := client.ChecksOptions{
 		Level: client.CheckLevel(cmd.Level),
 		Names: cmd.Positional.Checks,
 	}
-	checks, err := cmd.client.Checks(&opts)
+	checks, err := commandClient.Checks(&opts)
 	if err != nil {
 		return err
 	}
@@ -86,5 +89,6 @@ func (cmd *cmdChecks) Execute(args []string) error {
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%d/%d\n", check.Name, level, check.Status, check.Failures, check.Threshold)
 	}
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }

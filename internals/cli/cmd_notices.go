@@ -35,8 +35,6 @@ needs to be acknowledged again.
 `
 
 type cmdNotices struct {
-	client *client.Client
-
 	timeMixin
 	Users   client.NoticesUsers `long:"users"`
 	UID     *uint32             `long:"uid"`
@@ -58,7 +56,7 @@ func init() {
 			"--timeout": "Wait up to this duration for matching notices to arrive",
 		}),
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdNotices{client: opts.Client}
+			return &cmdNotices{}
 		},
 	})
 }
@@ -80,12 +78,17 @@ func (cmd *cmdNotices) Execute(args []string) error {
 		After:  state.NoticesLastOkayed,
 	}
 
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
 	var notices []*client.Notice
 	if cmd.Timeout != 0 {
 		ctx := notifyContext(context.Background(), os.Interrupt)
-		notices, err = cmd.client.WaitNotices(ctx, cmd.Timeout, &options)
+		notices, err = commandClient.WaitNotices(ctx, cmd.Timeout, &options)
 	} else {
-		notices, err = cmd.client.Notices(&options)
+		notices, err = commandClient.Notices(&options)
 	}
 	if err != nil {
 		return err
@@ -97,6 +100,7 @@ func (cmd *cmdNotices) Execute(args []string) error {
 		} else {
 			fmt.Fprintln(Stderr, "No matching notices.")
 		}
+		maybePresentWarnings(commandClient.WarningsSummary())
 		return nil
 	}
 
@@ -130,5 +134,6 @@ func (cmd *cmdNotices) Execute(args []string) error {
 	if err != nil {
 		return fmt.Errorf("cannot save CLI state: %w", err)
 	}
+	maybePresentWarnings(commandClient.WarningsSummary())
 	return nil
 }

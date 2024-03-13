@@ -61,8 +61,6 @@ var sharedRunEnterArgsHelp = map[string]string{
 }
 
 type cmdRun struct {
-	client *client.Client
-
 	sharedRunEnterOpts
 }
 
@@ -73,7 +71,7 @@ func init() {
 		Description: cmdRunDescription,
 		ArgsHelp:    sharedRunEnterArgsHelp,
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdRun{client: opts.Client}
+			return &cmdRun{}
 		},
 	})
 }
@@ -217,9 +215,14 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 
 	logger.Debugf("activation done in %v", time.Now().Truncate(time.Millisecond).Sub(t0))
 
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
+
 	if !rcmd.Hold {
 		servopts := client.ServiceOptions{}
-		changeID, err := rcmd.client.AutoStart(&servopts)
+		changeID, err := commandClient.AutoStart(&servopts)
 		if err != nil {
 			logger.Noticef("Cannot start default services: %v", err)
 		} else {
@@ -257,9 +260,14 @@ out:
 	// Close the client idle connection to the server (self connection) before we
 	// start with the HTTP shutdown process. This will speed up the server shutdown,
 	// and allow the Pebble process to exit faster.
-	rcmd.client.CloseIdleConnections()
+	commandClient.CloseIdleConnections()
 
-	return d.Stop(ch)
+	result := d.Stop(ch)
+	if result != nil {
+		return result
+	}
+	maybePresentWarnings(commandClient.WarningsSummary())
+	return nil
 }
 
 // convert args from [][]string type to map[string][]string

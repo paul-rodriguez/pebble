@@ -29,8 +29,6 @@ The version command displays the versions of the running client and server.
 `
 
 type cmdVersion struct {
-	client *client.Client
-
 	ClientOnly bool `long:"client"`
 }
 
@@ -43,7 +41,7 @@ func init() {
 			"--client": "Only display the client version",
 		},
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdVersion{client: opts.Client}
+			return &cmdVersion{}
 		},
 	})
 }
@@ -57,8 +55,17 @@ func (cmd cmdVersion) Execute(args []string) error {
 		fmt.Fprintln(Stdout, version.Version)
 		return nil
 	}
+	commandClient, err := defaultClient()
+	if err != nil {
+		return err
+	}
 
-	return printVersions(cmd.client)
+	err = printVersions(commandClient)
+	if err != nil {
+		return err
+	}
+	maybePresentWarnings(commandClient.WarningsSummary())
+	return nil
 }
 
 func printVersions(cli *client.Client) error {

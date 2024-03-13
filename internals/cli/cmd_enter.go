@@ -19,7 +19,6 @@ import (
 
 	"github.com/canonical/go-flags"
 
-	"github.com/canonical/pebble/client"
 	"github.com/canonical/pebble/internals/logger"
 )
 
@@ -47,7 +46,6 @@ These subcommands are currently supported:
 `
 
 type cmdEnter struct {
-	client *client.Client
 	parser *flags.Parser
 
 	sharedRunEnterOpts
@@ -63,7 +61,7 @@ func init() {
 		Summary:     cmdEnterSummary,
 		Description: cmdEnterDescription,
 		New: func(opts *CmdOptions) flags.Commander {
-			return &cmdEnter{client: opts.Client, parser: opts.Parser}
+			return &cmdEnter{parser: opts.Parser}
 		},
 		ArgsHelp: merge(sharedRunEnterArgsHelp, map[string]string{
 			"--run": "Start default services before executing subcommand",
@@ -108,7 +106,6 @@ func (cmd *cmdEnter) Execute(args []string) error {
 
 	runCmd := cmdRun{
 		sharedRunEnterOpts: cmd.sharedRunEnterOpts,
-		client:             cmd.client,
 	}
 
 	if len(cmd.Positional.Cmd) == 0 {
@@ -123,7 +120,7 @@ func (cmd *cmdEnter) Execute(args []string) error {
 		extraArgs []string
 	)
 
-	parser := Parser(cmd.client)
+	parser := Parser(nil)
 	parser.CommandHandler = func(c flags.Commander, a []string) error {
 		commander = c
 		extraArgs = a
